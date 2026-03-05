@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Note: Constrained Unseen Recovery Estimator (CUR-Estimator)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 300px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; border-bottom: 1px solid #d0d7de; padding-bottom: 8px; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; line-height: 1.5; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 16px; margin-top: 4px; border-left: 2px solid #e1e4e8; padding-left: 12px; }
+        .main-content { margin-left: 300px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 24px 0; }
+        @media (max-width: 900px) { body { display: block; } .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; } .main-content { margin-left: 0; padding: 20px; } }
+    </style>
+</head>
+<body class="markdown-body">
+    <nav class="sidebar">
+        <h2>Contents</h2>
+        <ul>
+            <li><a href="#1-research-background">1. Research Background</a></li>
+            <li><a href="#2-core-concept-of-cur-estimator">2. Core Concept of CUR-Estimator</a></li>
+            <li><a href="#3-key-architecture">3. Key Architecture</a></li>
+            <li><a href="#4-experimental-validation">4. Experimental Validation</a></li>
+            <li><a href="#5-conclusion">5. Conclusion</a></li>
+            <li><a href="#6-literature-source">6. Literature Source</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <h1>Paper Note: Constrained Unseen Recovery Estimator (CUR-Estimator)</h1>
+
+        <blockquote>
+            <p><strong>Paper Title:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</p>
+            <p><strong>Journal:</strong> Neurocomputing (Elsevier), Vol. 649, 2025</p>
+            <p><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.neucom.2025.130876-blue" alt="DOI"> 
+            <img src="https://img.shields.io/badge/Status-Published-brightgreen" alt="Status"> 
+            <img src="https://img.shields.io/badge/Topic-Missing_Data_Imputation-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-research-background">1. Research Background</h2>
+        <p>In the Prognostics and Health Management (PHM) of complex equipment like aero-engines, the integrity of sensor data is crucial for subsequent fault diagnosis and Remaining Useful Life (RUL) prediction. However, in real-world operations, data loss is a common occurrence due to sensor failures, maintenance requirements during specific conditions, or communication bandwidth limits.</p>
+        <p>Simply deleting missing records breaks the continuity of multivariate time series, necessitating data imputation. In aero-engine data imputation tasks, two major challenges exist:</p>
+        <ol>
+            <li><strong>Irregular Sampling Intervals</strong>: Every flight mission varies, and durations of phases (e.g., take-off, cruise) differ. Traditional imputation methods assume equidistant intervals, failing to reflect the true relationship between time spans and engine performance degradation.</li>
+            <li><strong>Outlier Issues in Neural Imputation</strong>: While deep learning excels at feature extraction, neural networks tend to generate extreme values outside normal physical ranges when facing high noise or long periods of missing data, leading to a lack of reliability in industrial engineering.</li>
+        </ol>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/4754a20c-6f0e-49f6-bc0f-b8e52a3a8876" />
+          <p><em>Fig 1. Neural imputation methods may generate unreasonable outliers due to a lack of constraints.</em></p>
+        </div>
+
+        <h2 id="2-core-concept-of-cur-estimator">2. Core Concept of CUR-Estimator</h2>
+        <p>To address these issues, the paper proposes the <strong>Constrained Unseen Recovery Estimator (CUR-Estimator)</strong>.</p>
+        <p>The logic behind this method lies in combining the "nonlinear fitting capability of neural networks" with the "stability of traditional statistical methods." On one hand, a tailored neural architecture captures complex patterns and the impact of time intervals. On the other hand, statistical imputation algorithms are introduced during the training phase as constraints to limit the reasonable range of outputs, significantly reducing the probability of generating unreasonable outliers.</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/9ef64f4d-43b9-4326-be74-adb25617888b" />
+          <p><em>Fig 2. Overall workflow and dual-constraint mechanism of CUR-Estimator.</em></p>
+        </div>
+
+        <h2 id="3-key-architecture">3. Key Architecture</h2>
+        <p>The CUR-Estimator architecture consists of two core components working in synergy:</p>
+        <p><strong>1. Interval-Aware Temporal Imputation Network (ITIN)</strong><br>
+        Modified from Gated Recurrent Units (GRU), this module introduces a Self-Attention mechanism to handle irregular time intervals. The mechanism converts the time difference between adjacent records into a weight coefficient. This allows the model to automatically decide: if intervals are short, the state depends heavily on history; if long, historical influence decays. This design fill missing values more reasonably using contextual information.</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/e0af5797-dfd1-4c14-ab62-ee5d50cdbda2" />
+          <p><em>Fig 3. Internal structure and time-decay mechanism of ITIN.</em></p>
+        </div>
+
+        <p><strong>2. Statistical Constraint Component</strong><br>
+        To prevent outliers in severely missing areas, Piecewise Cubic Hermite Interpolating Polynomials (PCHIP) are introduced as a statistical constraint. During training, the loss function calculates not only reconstruction error but also the difference between neural outputs and PCHIP results. This mechanism sets a boundary for the network, forcing it to fit complex distributions while ensuring outputs do not deviate excessively from smooth statistical ranges.</p>
+
+        <h2 id="4-experimental-validation">4. Experimental Validation</h2>
+        <p>Testing was performed on two datasets: the C-MAPSS simulation dataset and a real-world commercial aero-engine dataset from an Asian airline. The study compared current state-of-the-art models like CSDI, GP-VAE, and BRITS.</p>
+        <ul>
+            <li><strong>Error Performance</strong>: In repeated trials, CUR-Estimator achieved the lowest average MSE and MAE across both datasets, demonstrating higher precision.</li>
+            <li><strong>Boundary Deviation</strong>: Compared to unconstrained baselines, the upper and lower bounds of deviation for CUR-Estimator were significantly narrower, proving the effectiveness of the constraint component.</li>
+            <li><strong>Noise Robustness</strong>: Performance remained stable under different Signal-to-Noise Ratio (SNR) environments, with standard deviations significantly smaller than competitors.</li>
+        </ul>
+
+        <h2 id="5-conclusion">5. Conclusion</h2>
+        <p>CUR-Estimator solves temporal modeling challenges caused by irregular sampling by encoding time intervals into model weights. Simultaneously, the soft constraint from statistical methods fixes the defect of neural models prone to outliers in industrial data.</p>
+        <p>Generalization experiments on a public wind power dataset showed that CUR-Estimator also performs with high accuracy and stability in other complex equipment degradation tasks. It provides a framework balancing precision and reliability for handling non-equidistant, high-noise missing data.</p>
+
+        <hr>
+        <h2 id="6-literature-source">6. Literature Source</h2>
+        <ul>
+            <li><strong>Title:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</li>
+            <li><strong>Journal:</strong> Neurocomputing</li>
+            <li><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></li>
+        </ul>
+    </main>
+</body>
+</html>

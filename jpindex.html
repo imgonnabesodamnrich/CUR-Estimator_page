@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>論文ノート：制約付き未知回復推定器 (CUR-Estimator)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 300px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; border-bottom: 1px solid #d0d7de; padding-bottom: 8px; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; line-height: 1.5; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 16px; margin-top: 4px; border-left: 2px solid #e1e4e8; padding-left: 12px; }
+        .main-content { margin-left: 300px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 24px 0; }
+        @media (max-width: 900px) { body { display: block; } .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; } .main-content { margin-left: 0; padding: 20px; } }
+    </style>
+</head>
+<body class="markdown-body">
+    <nav class="sidebar">
+        <h2>目次</h2>
+        <ul>
+            <li><a href="#1-研究背景">1. 研究背景</a></li>
+            <li><a href="#2-cur-estimator手法の核心思想">2. CUR-Estimator手法の核心思想</a></li>
+            <li><a href="#3-モデルの主要アーキテクチャ">3. 主要アーキテクチャ</a></li>
+            <li><a href="#4-実験検証と性能評価">4. 実験検証と性能評価</a></li>
+            <li><a href="#5-結論">5. 結論</a></li>
+            <li><a href="#6-参考文献">6. 参考文献</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <h1>論文ノート：制約付き未知回復推定器（CUR-Estimator）</h1>
+
+        <blockquote>
+            <p><strong>論文タイトル:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</p>
+            <p><strong>ジャーナル:</strong> Neurocomputing (Elsevier), Vol. 649, 2025</p>
+            <p><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.neucom.2025.130876-blue" alt="DOI"> 
+            <img src="https://img.shields.io/badge/Status-Published-brightgreen" alt="Status"> 
+            <img src="https://img.shields.io/badge/Topic-Missing_Data_Imputation-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-研究背景">1. 研究背景</h2>
+        <p>航空エンジンのような複雑な装置の予測・健全性管理（PHM）において、センサデータの完全性は故障診断や寿命予測に不可欠です。しかし、実際の運用では、センサ故障、特定の点検による停止、通信制限などにより、欠損データ（Missing Data）が頻繁に発生します。</p>
+        <p>欠損データを直接削除すると多次元時系列の連続性が損なわれるため、補完が必要です。航空エンジンのデータ補完には2つの大きな課題があります：</p>
+        <ol>
+            <li><strong>不規則なサンプリング間隔</strong>：フライトごとに任務や持続時間が異なり、従来のような等間隔を前提とした手法では、エンジン劣化と時間経過の真の関係を反映できません。</li>
+            <li><strong>ニューラルネットワークによる異常値の問題</strong>：深層学習は特徴抽出に優れていますが、強いノイズや長期間の欠損に直面すると、物理的に不可能な極端な値を生成することがあり、信頼性に欠ける場合があります。</li>
+        </ol>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/4754a20c-6f0e-49f6-bc0f-b8e52a3a8876" />
+          <p><em>図1 ニューラルネットワーク単独では制約がないため、実際とはかけ離れた異常値を生成する可能性があります。</em></p>
+        </div>
+
+        <h2 id="2-cur-estimator手法の核心思想">2. CUR-Estimator手法の核心思想</h2>
+        <p>これらの課題に対し、本論文は<strong>制約付き未知回復推定器（CUR-Estimator）</strong>を提案しています。</p>
+        <p>この手法の論理は、「ニューラルネットワークの非線形フィッティング能力」と「従来の統計的手法の安定性」を組み合わせることにあります。設計されたネットワークで複雑なパターンと時間間隔の影響を捉えつつ、訓練フェーズで統計的補完アルゴリズム（PCHIP）を制約条件として導入し、出力の妥当な範囲を制限することで異常値の発生を抑制します。</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/9ef64f4d-43b9-4326-be74-adb25617888b" />
+          <p><em>図2 CUR-Estimatorの全体フローと二重制約メカニズム。</em></p>
+        </div>
+
+        <h2 id="3-モデルの主要アーキテクチャ">3. モデルの主要アーキテクチャ</h2>
+        <p>CUR-Estimatorは2つのコアコンポーネントが協調して動作します：</p>
+        <p><strong>1. 間隔認識時間補完ネットワーク (Interval-Aware Temporal Imputation Network, ITIN)</strong><br>
+        GRUをベースに、不規則な時間間隔を処理するための自己注意（Self-Attention）機構を導入しました。この機構により、記録の間隔が短ければ履歴を重視し、長ければ履歴の影響を減衰させるようモデルが自動的に判断し、適切なコンテキスト情報で欠損を埋めます。</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/e0af5797-dfd1-4c14-ab62-ee5d50cdbda2" />
+          <p><em>図3 ITINの内部構造と時間減衰メカニズム。</em></p>
+        </div>
+
+        <p><strong>2. 統計的制約コンポーネント</strong><br>
+        深刻な欠損領域での異常値を防ぐため、3次エルミート補完多項式（PCHIP）を統計的制約として導入。訓練時の損失関数に、ネットワーク出力とPCHIP補完結果の差異を計算に含めることで、ニューラルネットワークが滑らかな統計的補完の範囲から大きく逸脱することを防ぎます。</p>
+
+        <h2 id="4-実験検証と性能評価">4. 実験検証と性能評価</h2>
+        <p>C-MAPSSシミュレーションデータおよび実際の航空会社データを使用して検証を行いました。CSDI、GP-VAE、BRITSなどの主要モデルと比較：</p>
+        <ul>
+            <li><strong>誤差性能</strong>：CUR-Estimatorは両データセットで最低のMSEおよびMAEを記録し、高い精度を実証。</li>
+            <li><strong>境界偏差</strong>：制約なしのモデルと比較して、真値との偏差範囲が大幅に縮小し、統計的制約の効果を裏付けました。</li>
+            <li><strong>ノイズ耐性</strong>：異なるSN比環境でも安定した性能を維持し、標準偏差は比較手法よりも顕著に小さくなりました。</li>
+        </ul>
+
+        <h2 id="5-結論">5. 結論</h2>
+        <p>CUR-Estimatorは時間間隔の符号化により不定期サンプリングの課題を解決し、統計的手法のソフト制約によりニューラルモデルの異常値出力を改善しました。また、風力発電データでの汎化実験でも高い精度を示し、等間隔でない高ノイズの欠損データに対する高精度かつ信頼性の高いフレームワークを提供します。</p>
+
+        <hr>
+        <h2 id="6-参考文献">6. 参考文献</h2>
+        <ul>
+            <li><strong>タイトル:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</li>
+            <li><strong>ジャーナル:</strong> Neurocomputing</li>
+            <li><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></li>
+        </ul>
+    </main>
+</body>
+</html>

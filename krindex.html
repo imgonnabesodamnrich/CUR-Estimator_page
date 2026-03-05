@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>논문 노트: 제약된 미관측 복구 추정기 (CUR-Estimator)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <script>
+        MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { margin: 0; padding: 0; display: flex; min-height: 100vh; background-color: #fff; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+        .sidebar { width: 300px; background-color: #f6f8fa; border-right: 1px solid #d0d7de; position: fixed; height: 100vh; overflow-y: auto; padding: 24px; box-sizing: border-box; top: 0; left: 0; z-index: 100; }
+        .sidebar h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #24292f; border-bottom: 1px solid #d0d7de; padding-bottom: 8px; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { margin-bottom: 8px; }
+        .sidebar a { text-decoration: none; color: #57606a; font-size: 14px; display: block; padding: 4px 0; transition: color 0.2s; line-height: 1.5; }
+        .sidebar a:hover { color: #0969da; text-decoration: underline; }
+        .sidebar .sub-menu { margin-left: 16 Korea6px; margin-top: 4px; border-left: 2px solid #e1e4e8; padding-left: 12px; }
+        .main-content { margin-left: 300px; flex: 1; padding: 40px 60px; max-width: 1000px; }
+        html { scroll-behavior: smooth; }
+        div[align="center"] { text-align: center; margin: 24px 0; }
+        @media (max-width: 900px) { body { display: block; } .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid #d0d7de; } .main-content { margin-left: 0; padding: 20px; } }
+    </style>
+</head>
+<body class="markdown-body">
+    <nav class="sidebar">
+        <h2>목차 Contents</h2>
+        <ul>
+            <li><a href="#1-연구-배경">1. 연구 배경</a></li>
+            <li><a href="#2-cur-estimator-방법의-핵심-아이디어">2. CUR-Estimator 핵심 아이디어</a></li>
+            <li><a href="#3-모델-주요-아키텍처">3. 모델 주요 아키텍처</a></li>
+            <li><a href="#4-실험-검증-및-성능-결과">4. 실험 검증 및 성능 결과</a></li>
+            <li><a href="#5-결론">5. 결론</a></li>
+            <li><a href="#6-문헌-출처">6. 문헌 출처</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <h1>논문 노트: 제약된 미관측 복구 추정기 (CUR-Estimator)</h1>
+
+        <blockquote>
+            <p><strong>논문 제목:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</p>
+            <p><strong>저널:</strong> Neurocomputing (Elsevier), Vol. 649, 2025</p>
+            <p><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></p>
+        </blockquote>
+
+        <p>
+            <img src="https://img.shields.io/badge/DOI-10.1016%2Fj.neucom.2025.130876-blue" alt="DOI"> 
+            <img src="https://img.shields.io/badge/Status-Published-brightgreen" alt="Status"> 
+            <img src="https://img.shields.io/badge/Topic-Missing_Data_Imputation-orange" alt="Topic">
+        </p>
+
+        <hr>
+
+        <h2 id="1-연구-배경">1. 연구 배경</h2>
+        <p>항공 엔진과 같은 복잡한 장비의 예후 및 건전성 관리(PHM)에서 센서 데이터의 무결성은 고장 진단 및 수명 예측에 매우 중요합니다. 하지만 실제 운용 환경에서는 센서 고장, 정비 요구 사항, 통신 제한 등으로 인해 데이터 결측(Missing Data)이 빈번하게 발생합니다.</p>
+        <p>결측 데이터를 단순히 삭제하면 다변량 시계열의 연속성이 파괴되므로 데이터 보정이 필요합니다. 항공 엔진 데이터 보정 작업에는 두 가지 주요 과제가 있습니다:</p>
+        <ol>
+            <li><strong>불규칙한 샘플링 시간 간격</strong>: 비행 임무마다 기간이 다르며 이륙, 순항 등 각 단계의 지속 시간도 다릅니다. 전통적인 보정 방법은 등간격을 가정하므로 시간 경과와 엔진 성능 저하 사이의 실제 관계를 반영하지 못합니다.</li>
+            <li><strong>신경망 보정의 이상치 문제</strong>: 딥러닝은 특징 추출에 뛰어나지만, 산업 현장의 강한 노이즈나 장기 결측 구간에서 신경망이 물리적 범위를 벗어나는 극단적인 값을 생성하는 경우가 있어 신뢰성이 떨어집니다.</li>
+        </ol>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/4754a20c-6f0e-49f6-bc0f-b8e52a3a8876" />
+          <p><em>그림 1 신경망 보정 방법은 제약이 부족할 경우 실제 분포에서 벗어난 불합리한 이상치를 생성할 수 있습니다.</em></p>
+        </div>
+
+        <h2 id="2-cur-estimator-방법의-핵심-아이디어">2. CUR-Estimator 방법의 핵심 아이디어</h2>
+        <p>이러한 문제를 해결하기 위해 본 논문은 <strong>제약된 미관측 복구 추정기 (CUR-Estimator)</strong>를 제안합니다.</p>
+        <p>이 방법의 핵심은 "신경망의 비선형 피팅 능력"과 "전통적인 통계학 방법의 안정성"을 결합하는 것입니다. 설계된 신경망 아키텍처를 통해 복잡한 패턴과 시간 간격의 영향을 캡처하는 동시에, 훈련 단계에서 통계적 보정 알고리즘(PCHIP)을 제약 조건으로 도입하여 출력 범위를 제한함으로써 이상치 발생 가능성을 크게 낮춥니다.</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/9ef64f4d-43b9-4326-be74-adb25617888b" />
+          <p><em>그림 2 CUR-Estimator의 전체 실행 프로세스 및 이중 제약 메커니즘.</em></p>
+        </div>
+
+        <h2 id="3-모델-주요-아키텍처">3. 모델 주요 아키텍처</h2>
+        <p>CUR-Estimator는 두 가지 핵심 요소가 협력하여 작동합니다:</p>
+        <p><strong>1. 간격 인식 시간 보정 네트워크 (ITIN)</strong><br>
+        GRU를 기반으로 개선된 이 모듈은 불규칙한 시간 간격을 처리하기 위해 자가 주의(Self-Attention) 메커니즘을 도입했습니다. 이 메커니즘은 인접한 기록 사이의 시간 차이를 가중치로 변환합니다. 이를 통해 모델은 비행 기록 간격이 짧으면 이력 데이터에 의존하고, 간격이 길면 이력의 영향력을 감쇠시켜 문맥에 맞는 합리적인 보정을 수행합니다.</p>
+
+        <div align="center">
+          <img width="60%" src="https://github.com/user-attachments/assets/e0af5797-dfd1-4c14-ab62-ee5d50cdbda2" />
+          <p><em>그림 3 ITIN의 내부 구조 및 시간 감쇠 메커니즘.</em></p>
+        </div>
+
+        <p><strong>2. 통계적 제약 컴포넌트</strong><br>
+        심각한 결측 구간에서의 이상치를 방지하기 위해 PCHIP(Piecewise Cubic Hermite Interpolating Polynomial)를 통계적 제약으로 사용합니다. 훈련 중 손실 함수에 신경망 출력과 PCHIP 결과의 차이를 반영함으로써, 신경망이 복잡한 분포를 학습하면서도 매끄러운 통계적 범위 내에서 결과를 내도록 강제합니다.</p>
+
+        <h2 id="4-실험-검증-및-성능-결과">4. 실험 검증 및 성능 결과</h2>
+        <p>C-MAPSS 시뮬레이션 데이터와 실제 항공사 데이터를 사용하여 테스트를 수행했습니다. CSDI, GP-VAE, BRITS 등 최신 모델과 비교한 결과:</p>
+        <ul>
+            <li><strong>오차 성능</strong>: 반복 실험 결과, CUR-Estimator는 두 데이터 세트 모두에서 가장 낮은 MSE와 MAE를 기록하여 정밀한 보정 능력을 입증했습니다.</li>
+            <li><strong>경계 편차</strong>: 제약이 없는 기본 모델에 비해 참값과의 편차 범위가 현저히 좁아졌으며, 이는 통계적 제약의 효과를 보여줍니다.</li>
+            <li><strong>노이즈 강건성</strong>: 다양한 SNR 환경에서도 성능이 안정적이었으며, 표준 편차가 비교 방법들에 비해 명확하게 작았습니다.</li>
+        </ul>
+
+        <h2 id="5-결론">5. 결론</h2>
+        <p>CUR-Estimator는 시간 간격 정보를 모델 가중치에 인코딩하여 불규칙 샘플링 시계열 모델링 문제를 해결했으며, 통계적 제약을 통해 산업 데이터에서 신경망이 이상치를 출력하는 결함을 개선했습니다. 또한 풍력 발전 데이터 테스트에서도 높은 정확도를 보여주어, 비등간격 및 고잡음 환경의 결측 데이터 처리에 대한 신뢰성 있는 프레임워크를 제공합니다.</p>
+
+        <hr>
+        <h2 id="6-문헌-출처">6. 문헌 출처</h2>
+        <ul>
+            <li><strong>제목:</strong> CUR-Estimator: Towards reliable missing data imputation for aero-engine degradation process</li>
+            <li><strong>저널:</strong> Neurocomputing</li>
+            <li><strong>DOI:</strong> <a href="https://doi.org/10.1016/j.neucom.2025.130876">10.1016/j.neucom.2025.130876</a></li>
+        </ul>
+    </main>
+</body>
+</html>
